@@ -270,9 +270,11 @@ services:
       PGRST_ADMIN_SERVER_HOST: localhost
 
       # PostgREST accepts a plain-text symmetric secret, a single JWK, or a JWKS.
-      # For Podman, use either PGRST_JWT_SECRET: ${JWT_SECRET} or
-      # PGRST_JWT_SECRET: ${JWT_JWKS}
-      PGRST_JWT_SECRET: ${JWT_JWKS:-${JWT_SECRET}}
+      # Using the plain symmetric secret directly: this deployment only uses the
+      # legacy symmetric key flow (no JWT_JWKS/asymmetric keys generated), and the
+      # nested ${JWT_JWKS:-${JWT_SECRET}} default did not resolve correctly under
+      # this docker compose version (verified via `docker compose config`).
+      PGRST_JWT_SECRET: ${JWT_SECRET}
 
       PGRST_DB_USE_LEGACY_GUCS: "false"
       PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
@@ -480,6 +482,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+      # TagNav application schema (artifacts, tags, collections, projects, settings + RLS)
+      - ./volumes/db/tagnav-schema.sql:/docker-entrypoint-initdb.d/migrations/99-zz-tagnav-schema.sql:Z
       # Must be superuser to create event trigger
       - ./volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
       # Must be superuser to alter reserved role
